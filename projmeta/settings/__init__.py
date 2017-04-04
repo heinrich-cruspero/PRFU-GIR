@@ -69,7 +69,8 @@ INSTALLED_APPS = (
     'django_extensions',
 
     'django.contrib.admin',
-    'django.contrib.auth',
+    # 'django.contrib.auth',
+    'apps.DjangoContribAuthConfig',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',

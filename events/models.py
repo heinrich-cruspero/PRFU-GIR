@@ -13,11 +13,15 @@ class Event(models.Model):
     description = models.TextField(**optional)
     date = models.DateField(**optional)
 
-    participants = models.ManyToManyField(UserProfile, related_name='Participants', **optional)
+    participants = models.ManyToManyField(
+        UserProfile,
+        related_name='Participants',
+        **optional
+    )
 
     class Meta:
         verbose_name = _('Event')
         verbose_name_plural = _('Events')
 
     def __unicode__(self):
-        return  self.name
+        return self.name

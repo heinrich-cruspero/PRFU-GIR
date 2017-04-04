@@ -1,16 +1,16 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.utils.translation import ugettext as _
-
 
 from .models import UserProfile
 
 from datetime import date
 
 
-class MyUserAdmin(UserAdmin):
+class ProjectCustomUserAdmin(UserAdmin):
+
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
@@ -26,48 +26,48 @@ class MyUserAdmin(UserAdmin):
     )
 
 
-# class AgeGroupListFilter(admin.SimpleListFilter):
-#     # Human-readable title which will be displayed in the
-#     # right admin sidebar just above the filter options.
-#     title = _('decade born')
+class AgeGroupListFilter(admin.SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = _('Age Group')
 
-#     # Parameter for the filter that will be used in the URL query.
-#     parameter_name = 'decade'
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'age'
 
-#     def lookups(self, request, model_admin):
-#         """
-#         Returns a list of tuples. The first element in each
-#         tuple is the coded value for the option that will
-#         appear in the URL query. The second element is the
-#         human-readable name for the option that will appear
-#         in the right sidebar.
-#         """
-#         return (
-#             ('80s', _('in the eighties')),
-#             ('90s', _('in the nineties')),
-#         )
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        return (
+            ('Juniors', _('Juniors')),
+            ('Seniors', _('Seniors')),
+        )
 
-#     def queryset(self, request, queryset):
-#         """
-#         Returns the filtered queryset based on the value
-#         provided in the query string and retrievable via
-#         `self.value()`.
-#         """
-#         # Compare the requested value (either '80s' or '90s')
-#         # to decide how to filter the queryset.
-#         if self.value() == '80s':
-#             return queryset.filter(birthday__gte=date(1980, 1, 1),
-#                                     birthday__lte=date(1989, 12, 31))
-#         if self.value() == '90s':
-#             return queryset.filter(birthday__gte=date(1990, 1, 1),
-#                                     birthday__lte=date(1999, 12, 31))
-
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+        # Compare the requested value (either '80s' or '90s')
+        # to decide how to filter the queryset.
+        if self.value() == 'Juniors':
+            return queryset.filter(age__lte=15)
+        if self.value() == 'Seniors':
+            return queryset.filter(age__gt=15)
 
 
 class UserProfileAdmin(admin.ModelAdmin):
     model = UserProfile
-    exclude = ('events',)
-    # list_filter = (AgeGroupListFilter,)
+    exclude = (
+        'events',
+        'age',
+    )
+    list_filter = (AgeGroupListFilter,)
 
     list_display = (
         'id',
@@ -75,7 +75,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         'get_first_name',
         'get_email',
         'get_username',
-        'get_age'
+        'age'
     )
 
     search_fields = (
@@ -96,18 +96,6 @@ class UserProfileAdmin(admin.ModelAdmin):
     def get_username(self, obj):
         return obj.user.username
 
-    def get_queryset(self, request):
-        qs = super(UserProfileAdmin, self).get_queryset(request)
-
-        # import pdb; pdb.set_trace()
-        newlist = sorted(qs, key=lambda x: x.calculate_age(), reverse=True)
-        newlist = (d.id for d in newlist)
-
-        return UserProfile.objects.filter(id__in=newlist)
-
-    def get_age(self, obj):
-        return obj.calculate_age()
-
     get_last_name.short_description = 'Surname'
     get_last_name.admin_order_field = 'user__last_name'
 
@@ -120,10 +108,8 @@ class UserProfileAdmin(admin.ModelAdmin):
     get_username.short_description = 'Username'
     get_username.admin_order_field = 'user__username'
 
-    get_age.short_description = 'Age'
-    # get_age.admin_order_field = 'get_age'
-
 
 admin.site.unregister(User)
-admin.site.register(User, MyUserAdmin)
+admin.site.unregister(Group)
+admin.site.register(User, ProjectCustomUserAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
