@@ -29,6 +29,7 @@ class UserProfile(models.Model):
     address = models.CharField(max_length=500, **optional)
     city = models.CharField(max_length=100)
     country = CountryField()
+    mobile = models.CharField(max_length=30, **optional)
 
     weight = models.IntegerField(default=0)
     height = models.IntegerField(default=0)

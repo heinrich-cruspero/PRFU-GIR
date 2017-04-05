@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
 from django.utils.translation import ugettext as _
 
@@ -9,7 +10,30 @@ from .models import UserProfile
 from datetime import date
 
 
-class ProjectCustomUserAdmin(UserAdmin):
+class CustomUserCreationForm(UserCreationForm):
+    """
+    A UserCreationForm with optional password inputs.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(CustomUserCreationForm, self).__init__(*args, **kwargs)
+        self.fields['password1'].required = False
+        self.fields['password2'].required = False
+        # If one field gets autocompleted but not the other, our 'neither
+        # password or both password' validation will be triggered.
+        self.fields['password1'].widget.attrs['autocomplete'] = 'off'
+        self.fields['password2'].widget.attrs['autocomplete'] = 'off'
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = super(CustomUserCreationForm, self).clean_password2()
+        if bool(password1) ^ bool(password2):
+            raise forms.ValidationError("Fill out both fields")
+        return password2
+
+
+class CustomUserAdmin(UserAdmin):
+    add_form = CustomUserCreationForm
 
     add_fieldsets = (
         (None, {
@@ -111,5 +135,5 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
-admin.site.register(User, ProjectCustomUserAdmin)
+admin.site.register(User, CustomUserAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
