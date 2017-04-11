@@ -5,7 +5,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
 from django.utils.translation import ugettext as _
 
-from .models import UserProfile
+from .models import UserProfile, Contact, Waiver
+from affiliations.models import Affiliation
 
 from datetime import date
 
@@ -14,6 +15,7 @@ class CustomUserCreationForm(UserCreationForm):
     """
     A UserCreationForm with optional password inputs.
     """
+    middle_name = forms.CharField(label='Phone Number', required=False)
 
     def __init__(self, *args, **kwargs):
         super(CustomUserCreationForm, self).__init__(*args, **kwargs)
@@ -85,8 +87,19 @@ class AgeGroupListFilter(admin.SimpleListFilter):
             return queryset.filter(age__gt=15)
 
 
+class AffiliationInline(admin.TabularInline):
+    model = Affiliation.members.through
+    verbose_name = "Affiliation"
+    verbose_name_plural = "My Affiliations"
+
+
 class UserProfileAdmin(admin.ModelAdmin):
     model = UserProfile
+
+    inlines = [
+        AffiliationInline,
+    ]
+
     exclude = (
         'events',
         'age',
@@ -95,45 +108,63 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     list_display = (
         'id',
-        'get_last_name',
-        'get_first_name',
-        'get_email',
-        'get_username',
+        'last_name',
+        'first_name',
+        'middle_name',
+        'email',
         'age'
     )
 
     search_fields = (
-        'user__first_name',
-        'user__last_name',
-        'user__username'
+        'first_name',
+        'last_name',
     )
 
-    def get_last_name(self, obj):
-        return obj.user.last_name
+    PERSONAL_INFO = [
+        'last_name',
+        'first_name',
+        'middle_name',
+        'date_of_birth',
+        'gender',
+    ]
 
-    def get_first_name(self, obj):
-        return obj.user.first_name
+    CONTACT_INFO = [
+        'mobile',
+        'email',
+        'address',
+        'city',
+        # 'country',
+        # 'level',
+        # 'course',
+        # 'emergency_contact',
+    ]
 
-    def get_email(self, obj):
-        return obj.user.email
+    ACADEMIC_INFO = [
+        'level',
+        'course',
+    ]
 
-    def get_username(self, obj):
-        return obj.user.username
+    VITALS_INFO = [
+        'weight',
+        'height',
+        'wingspan',
+        'blood_type',
+    ]
 
-    get_last_name.short_description = 'Surname'
-    get_last_name.admin_order_field = 'user__last_name'
+    fieldsets = [
+        ('PERSONAL INFORMATION', {'fields': PERSONAL_INFO}),
+        ('CONTACT INFORMATION', {'fields': CONTACT_INFO}),
+        ('ACADEMIC INFORMATION', {'fields': ACADEMIC_INFO}),
+        # ('VITALS', {'fields': VITALS_INFO}),
+    ]
 
-    get_first_name.short_description = 'First Name'
-    get_first_name.admin_order_field = 'user__first_name'
-
-    get_email.short_description = 'Email'
-    get_email.admin_order_field = 'user__email'
-
-    get_username.short_description = 'Username'
-    get_username.admin_order_field = 'user__username'
-
+    related_objects = [
+        (Waiver, {'fields': ['event',]}),
+    ]
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
+admin.site.register(Contact)
+admin.site.register(Waiver)

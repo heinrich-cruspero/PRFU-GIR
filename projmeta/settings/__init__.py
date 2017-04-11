@@ -62,10 +62,12 @@ ROOT_URLCONF = 'projcore.urls'
 
 INTERNAL_APPS = (
     'accounts',
+    'affiliations',
     'events',
 )
 INSTALLED_APPS = (
-    'suit',
+    # 'suit',
+    # 'grappelli',
     'django_extensions',
 
     'django.contrib.admin',
