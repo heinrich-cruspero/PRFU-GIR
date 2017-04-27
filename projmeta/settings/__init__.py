@@ -68,6 +68,7 @@ INTERNAL_APPS = (
 INSTALLED_APPS = (
     # 'suit',
     # 'grappelli',
+    'inline_actions',
     'django_extensions',
 
     'django.contrib.admin',

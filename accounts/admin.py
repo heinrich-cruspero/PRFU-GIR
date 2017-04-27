@@ -1,5 +1,7 @@
+from datetime import date
+
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
@@ -7,8 +9,12 @@ from django.utils.translation import ugettext as _
 
 from .models import UserProfile, Contact, Waiver
 from affiliations.models import Affiliation
+from events.models import Event
 
-from datetime import date
+
+from inline_actions.admin import InlineActionsMixin
+from inline_actions.admin import InlineActionsModelAdminMixin
+from inline_actions.actions import DefaultActionsMixin, ViewAction
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -87,17 +93,75 @@ class AgeGroupListFilter(admin.SimpleListFilter):
             return queryset.filter(age__gt=15)
 
 
+class ChangeWaiverMixin(object):
+
+    def get_inline_actions(self, request, obj=None):
+        actions = super(ChangeWaiverMixin,
+                        self).get_inline_actions(request, obj)
+
+        if obj:
+            try:
+                waiver = Waiver.objects.get(
+                    userprofile__id=obj.userprofile_id,
+                    event__id=obj.event.id,
+                )
+                actions.append('remove_waiver')
+            except Waiver.DoesNotExist:
+                actions.append('add_wavier')
+
+        return actions
+
+    def add_wavier(self, request, obj, parent_obj=None):
+        userprofile = UserProfile.objects.get(id=obj.userprofile_id)
+        event = Event.objects.get(id=obj.event.id)
+
+        Waiver.objects.create(
+            userprofile=userprofile,
+            event=event,
+        )
+        message = "Added waiver to event: {}".format(obj.event)
+        messages.success(request, _(message))
+    add_wavier.short_description = _("Add Waiver")
+
+    def remove_waiver(self, request, obj, parent_obj=None):
+        waiver = Waiver.objects.get(
+            userprofile__id=obj.userprofile_id,
+            event__id=obj.event.id,
+        )
+
+        waiver.delete()
+
+        message = "Removed waiver to event: {}".format(obj.event)
+        messages.error(request, _(message))
+    remove_waiver.short_description = _("Remove Waiver")
+
+
+class EventInline(ChangeWaiverMixin,
+                  InlineActionsMixin,
+                  admin.TabularInline):
+
+    model = Event.participants.through
+    verbose_name = "Event"
+    verbose_name_plural = "My Events"
+
+    # def has_add_permission(self, request):
+    #     return False
+
+
 class AffiliationInline(admin.TabularInline):
     model = Affiliation.members.through
     verbose_name = "Affiliation"
     verbose_name_plural = "My Affiliations"
 
 
-class UserProfileAdmin(admin.ModelAdmin):
+class UserProfileAdmin(InlineActionsModelAdminMixin,
+                       admin.ModelAdmin):
+
     model = UserProfile
 
     inlines = [
         AffiliationInline,
+        EventInline,
     ]
 
     exclude = (
@@ -111,7 +175,6 @@ class UserProfileAdmin(admin.ModelAdmin):
         'last_name',
         'first_name',
         'middle_name',
-        'email',
         'age'
     )
 
@@ -158,13 +221,17 @@ class UserProfileAdmin(admin.ModelAdmin):
         # ('VITALS', {'fields': VITALS_INFO}),
     ]
 
-    related_objects = [
-        (Waiver, {'fields': ['event',]}),
-    ]
+class WaiverAdmin(admin.ModelAdmin):
+    model = Waiver
+
+    list_display = (
+        'event',
+        'userprofile',
+    )
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Contact)
-admin.site.register(Waiver)
+admin.site.register(Waiver, WaiverAdmin)

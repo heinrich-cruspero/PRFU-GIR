@@ -152,6 +152,7 @@ class Waiver(models.Model):
     class Meta:
         verbose_name = _('Waiver')
         verbose_name_plural = _('Waivers')
+        unique_together = ['userprofile', 'event',]
 
     def __unicode__(self):
         purpose = ' for {}'.format(self.event.name) if self.event else ''
